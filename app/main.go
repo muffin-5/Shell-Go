@@ -10,6 +10,12 @@ import (
 // Ensures gofmt doesn't remove the "fmt" import in stage 1 (feel free to remove this!)
 var _ = fmt.Print
 
+var builtins = map[string]bool{
+	"exit": true,
+	"echo": true,
+	"type": true,
+}
+
 func main() {
 
 	reader := bufio.NewReader(os.Stdin)
@@ -38,6 +44,17 @@ func main() {
 				fmt.Println(command[len("echo "):])
 			}
 			continue
+		}
+
+		fields := strings.Fields(command)
+		cmd := fields[0]
+
+		if cmd == "type" && len(fields) == 2 {
+			if builtins[fields[1]] {
+				fmt.Println(cmd + "is a shell builtin")
+			} else {
+				fmt.Println(cmd + ": not found")
+			}
 		}
 
 		fmt.Println(command + ": command not found")

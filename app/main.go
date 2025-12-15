@@ -33,11 +33,18 @@ func main() {
 
 		command = strings.TrimSpace(command)
 
+		if command == "" {
+			continue
+		}
+
+		fields := strings.Fields(command)
+		cmd := fields[0]
+
 		if command == "exit" {
 			return
 		}
 
-		if command == "echo" || strings.HasPrefix(command, "echo ") {
+		if cmd == "echo" {
 			if command == "echo" {
 				fmt.Println()
 			} else {
@@ -46,14 +53,16 @@ func main() {
 			continue
 		}
 
-		fields := strings.Fields(command)
-		cmd := fields[0]
-
-		if cmd == "type" && len(fields) == 2 {
-			if builtins[fields[1]] {
-				fmt.Println(cmd + "is a shell builtin")
+		if cmd == "type" {
+			if len(fields) >= 2 {
+				if builtins[fields[1]] {
+					fmt.Println(fields[1] + " is a shell builtin")
+				} else {
+					fmt.Println(fields[1] + ": not found")
+				}
+				continue
 			} else {
-				fmt.Println(cmd + ": not found")
+				continue
 			}
 		}
 

@@ -114,12 +114,11 @@ func main() {
 
 			path := args[0]
 
-			if strings.HasPrefix(path, "/") {
-				err := os.Chdir(path)
-				if err != nil {
-					fmt.Println("cd:", path+": No such file or directory")
-				}
+			err := os.Chdir(path)
+			if err != nil {
+				fmt.Println("cd:", path+": No such file or directory")
 			}
+
 			continue
 		}
 

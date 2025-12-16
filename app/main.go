@@ -23,17 +23,23 @@ var builtins = map[string]bool{
 func parseCommand(input string) []string {
 	var args []string
 	var current strings.Builder
-	inQuotes := false
+	inSingleQuotes := false
+	inDoubleQuotes := false
 
 	for i := 0; i < len(input); i++ {
 		c := input[i]
 
-		if c == '\'' {
-			inQuotes = !inQuotes
+		if c == '\'' && !inDoubleQuotes {
+			inSingleQuotes = !inSingleQuotes
 			continue
 		}
 
-		if c == ' ' && !inQuotes {
+		if c == '"' && !inSingleQuotes {
+			inDoubleQuotes = !inDoubleQuotes
+			continue
+		}
+
+		if c == ' ' && !inSingleQuotes && !inDoubleQuotes {
 			if current.Len() > 0 {
 				args = append(args, current.String())
 				current.Reset()

@@ -16,6 +16,7 @@ var builtins = map[string]bool{
 	"exit": true,
 	"echo": true,
 	"type": true,
+	"pwd":  true,
 }
 
 func main() {
@@ -96,12 +97,12 @@ func main() {
 		}
 
 		if cmd == "pwd" {
-			currentPath, err := os.Getwd()
+			wd, err := os.Getwd()
 			if err != nil {
 				continue
 			}
 
-			fmt.Println(currentPath)
+			fmt.Println(wd)
 			continue
 		}
 

@@ -47,12 +47,24 @@ func parseCommand(input string) []string {
 			continue
 		}
 
-		if c == '\\' && !inSingleQuotes && !inDoubleQuotes {
-			if i < len(input)-1 {
-				i++
-				c = input[i]
-			} else {
-				continue
+		if c == '\\' {
+			if !inSingleQuotes && !inDoubleQuotes {
+				if i < len(input)-1 {
+					i++
+					c = input[i]
+				} else {
+					continue
+				}
+			}
+
+			if inDoubleQuotes {
+				if i+1 < len(input) {
+					if input[i+1] == '\\' || input[i+1] == '"' {
+						current.WriteByte(input[i+1])
+						i++
+						continue
+					}
+				}
 			}
 		}
 

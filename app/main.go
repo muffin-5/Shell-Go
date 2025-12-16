@@ -95,6 +95,16 @@ func main() {
 			}
 		}
 
+		if cmd == "pwd" {
+			currentPath, err := os.Getwd()
+			if err != nil {
+				continue
+			}
+
+			fmt.Println(currentPath)
+			continue
+		}
+
 		pathenv := os.Getenv("PATH")
 		dirs := strings.Split(pathenv, string(os.PathListSeparator))
 

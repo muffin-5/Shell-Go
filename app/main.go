@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -40,6 +41,7 @@ func main() {
 
 		fields := strings.Fields(command)
 		cmd := fields[0]
+		args := fields[1:]
 
 		if command == "exit" {
 			return
@@ -77,7 +79,11 @@ func main() {
 					}
 
 					if info.Mode().IsRegular() && info.Mode().Perm()&0111 != 0 {
-						fmt.Println(target + " is " + fullPath)
+						cmd := exec.Command(fullPath, args...)
+						cmd.Stdin = os.Stdin
+						cmd.Stdout = os.Stdout
+						cmd.Stderr = os.Stderr
+						cmd.Run()
 						found = true
 						break
 					}

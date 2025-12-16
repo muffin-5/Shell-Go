@@ -47,6 +47,15 @@ func parseCommand(input string) []string {
 			continue
 		}
 
+		if c == '\\' && !inSingleQuotes && !inDoubleQuotes {
+			if i < len(input)-1 {
+				i++
+				c = input[i]
+			} else {
+				continue
+			}
+		}
+
 		current.WriteByte(c)
 	}
 

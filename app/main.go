@@ -79,11 +79,7 @@ func main() {
 					}
 
 					if info.Mode().IsRegular() && info.Mode().Perm()&0111 != 0 {
-						cmd := exec.Command(fullPath, args...)
-						cmd.Stdin = os.Stdin
-						cmd.Stdout = os.Stdout
-						cmd.Stderr = os.Stderr
-						cmd.Run()
+						fmt.Println(target + " is " + fullPath)
 						found = true
 						break
 					}
@@ -99,6 +95,30 @@ func main() {
 			}
 		}
 
-		fmt.Println(command + ": command not found")
+		pathenv := os.Getenv("PATH")
+		dirs := strings.Split(pathenv, string(os.PathListSeparator))
+
+		executed := false
+
+		for _, dir := range dirs {
+			fullPath := filepath.Join(dir, cmd)
+			info, err := os.Stat(fullPath)
+			if err != nil {
+				continue
+			}
+			if info.Mode().IsRegular() && info.Mode().Perm()&0111 != 0 {
+				c := exec.Command(cmd, args...)
+				c.Stdin = os.Stdin
+				c.Stdout = os.Stdout
+				c.Stderr = os.Stderr
+				c.Run()
+				executed = true
+				break
+			}
+		}
+
+		if !executed {
+			fmt.Println(command + ": command not found")
+		}
 	}
 }

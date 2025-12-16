@@ -20,6 +20,36 @@ var builtins = map[string]bool{
 	"cd":   true,
 }
 
+func parseCommand(input string) []string {
+	var args []string
+	var current strings.Builder
+	inQuotes := false
+
+	for i := 0; i < len(input); i++ {
+		c := input[i]
+
+		if c == '\'' {
+			inQuotes = !inQuotes
+			continue
+		}
+
+		if c == ' ' && !inQuotes {
+			if current.Len() > 0 {
+				args = append(args, current.String())
+				current.Reset()
+			}
+			continue
+		}
+
+		current.WriteByte(c)
+	}
+
+	if current.Len() > 0 {
+		args = append(args, current.String())
+	}
+	return args
+}
+
 func main() {
 
 	reader := bufio.NewReader(os.Stdin)
@@ -41,7 +71,8 @@ func main() {
 			continue
 		}
 
-		fields := strings.Fields(command)
+		fields := parseCommand(command)
+
 		cmd := fields[0]
 		args := fields[1:]
 
@@ -50,11 +81,7 @@ func main() {
 		}
 
 		if cmd == "echo" {
-			if command == "echo" {
-				fmt.Println()
-			} else {
-				fmt.Println(command[len("echo "):])
-			}
+			fmt.Println(strings.Join(args, " "))
 			continue
 		}
 

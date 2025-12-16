@@ -114,6 +114,14 @@ func main() {
 
 			path := args[0]
 
+			if path == "~" {
+				home := os.Getenv("HOME")
+				if home == "" {
+					fmt.Println("cd: ~: No such file or directory")
+				}
+				path = home
+			}
+
 			err := os.Chdir(path)
 			if err != nil {
 				fmt.Println("cd:", path+": No such file or directory")

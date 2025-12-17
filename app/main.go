@@ -21,6 +21,32 @@ var builtins = map[string]bool{
 	"cd":   true,
 }
 
+type commandCompleter struct{}
+
+func (c *commandCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
+	var suggestions [][]rune
+	lineStr := string(line[:pos])
+	trimmedStr := strings.TrimLeft(lineStr, " ")
+
+	if strings.Contains(trimmedStr, " ") {
+		return nil, 0
+	}
+
+	commands := []string{"echo ", "exit ", "type ", "pwd ", "cd "}
+
+	for _, command := range commands {
+		if strings.HasPrefix(command, trimmedStr) {
+			suggestions = append(suggestions, []rune(command[len(trimmedStr):]))
+		}
+	}
+
+	if len(suggestions) == 0 {
+		fmt.Print("\007")
+	}
+
+	return suggestions, len(trimmedStr)
+}
+
 func extractRedirection(args []string) ([]string, string, bool, string, bool) {
 	var stdoutFile string
 	var stderrFile string
@@ -120,19 +146,18 @@ func parseCommand(input string) []string {
 
 func main() {
 
-	// reader := bufio.NewReader(os.Stdin)
-	completer := readline.NewPrefixCompleter(
-		readline.PcItem("echo"),
-		readline.PcItem("exit"),
-	)
 	rl, err := readline.NewEx(&readline.Config{
 		Prompt:       "$ ",
-		AutoComplete: completer,
+		AutoComplete: &commandCompleter{},
+		Stdin:        os.Stdin,
+		Stdout:       os.Stdout,
 	})
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	defer rl.Close()
+
 	for {
 
 		command, err := rl.Readline()

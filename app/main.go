@@ -20,6 +20,18 @@ var builtins = map[string]bool{
 	"cd":   true,
 }
 
+func extractRedirection(args []string) ([]string, string) {
+	for i := 0; i < len(args)-1; i++ {
+		if args[i] == ">" || args[i] == "1>" {
+			file := args[i+1]
+
+			newArgs := append(args[:i], args[i+2:]...)
+			return newArgs, file
+		}
+	}
+	return args, ""
+}
+
 func parseCommand(input string) []string {
 	var args []string
 	var current strings.Builder
@@ -108,7 +120,21 @@ func main() {
 		}
 
 		if cmd == "echo" {
-			fmt.Println(strings.Join(args, " "))
+			args, outFile := extractRedirection(args)
+			output := strings.Join(args, " ")
+
+			if outFile != "" {
+				f, err := os.OpenFile(outFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+				if err != nil {
+					fmt.Println("error opening file:", err)
+					continue
+				}
+				fmt.Fprintln(f, output)
+				f.Close()
+
+			} else {
+				fmt.Println(output)
+			}
 			continue
 		}
 
@@ -184,6 +210,8 @@ func main() {
 			continue
 		}
 
+		args, outFile := extractRedirection(args)
+
 		pathenv := os.Getenv("PATH")
 		dirs := strings.Split(pathenv, string(os.PathListSeparator))
 
@@ -198,16 +226,30 @@ func main() {
 			if info.Mode().IsRegular() && info.Mode().Perm()&0111 != 0 {
 				c := exec.Command(cmd, args...)
 				c.Stdin = os.Stdin
-				c.Stdout = os.Stdout
 				c.Stderr = os.Stderr
-				c.Run()
+
+				if outFile != "" {
+					f, err := os.OpenFile(outFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+					if err != nil {
+						fmt.Println("error opening file:", err)
+						break
+					}
+
+					c.Stdout = f
+					c.Run()
+					f.Close()
+				} else {
+					c.Stdout = os.Stdout
+					c.Run()
+				}
+
 				executed = true
 				break
 			}
 		}
 
 		if !executed {
-			fmt.Println(command + ": command not found")
+			fmt.Println(cmd + ": command not found")
 		}
 	}
 }

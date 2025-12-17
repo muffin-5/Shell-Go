@@ -20,10 +20,11 @@ var builtins = map[string]bool{
 	"cd":   true,
 }
 
-func extractRedirection(args []string) ([]string, string, bool, string) {
+func extractRedirection(args []string) ([]string, string, bool, string, bool) {
 	var stdoutFile string
 	var stderrFile string
 	appendStdout := false
+	appendStderr := false
 
 	newArgs := []string{}
 
@@ -43,6 +44,12 @@ func extractRedirection(args []string) ([]string, string, bool, string) {
 				continue
 			case "2>":
 				stderrFile = args[i+1]
+				appendStderr = false
+				i++
+				continue
+			case "2>>":
+				stderrFile = args[i+1]
+				appendStderr = true
 				i++
 				continue
 			}
@@ -50,7 +57,7 @@ func extractRedirection(args []string) ([]string, string, bool, string) {
 		newArgs = append(newArgs, args[i])
 
 	}
-	return newArgs, stdoutFile, appendStdout, stderrFile
+	return newArgs, stdoutFile, appendStdout, stderrFile, appendStderr
 }
 
 func parseCommand(input string) []string {
@@ -141,11 +148,17 @@ func main() {
 		}
 
 		if cmd == "echo" {
-			args, outFile, appendOut, errFile := extractRedirection(args)
+			args, outFile, appendOut, errFile, appendErr := extractRedirection(args)
 			output := strings.Join(args, " ")
 
 			if errFile != "" {
-				f, err := os.OpenFile(errFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+				flags := os.O_CREATE | os.O_WRONLY
+				if appendErr {
+					flags |= os.O_APPEND
+				} else {
+					flags |= os.O_TRUNC
+				}
+				f, err := os.OpenFile(errFile, flags, 0644)
 				if err != nil {
 					f.Close()
 				}
@@ -245,7 +258,7 @@ func main() {
 			continue
 		}
 
-		args, outFile, appendOut, errFile := extractRedirection(args)
+		args, outFile, appendOut, errFile, appendErr := extractRedirection(args)
 
 		pathenv := os.Getenv("PATH")
 		dirs := strings.Split(pathenv, string(os.PathListSeparator))
@@ -284,7 +297,15 @@ func main() {
 				}
 
 				if errFile != "" {
-					ef, err := os.OpenFile(errFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+					flags := os.O_CREATE | os.O_WRONLY
+
+					if appendErr {
+						flags |= os.O_APPEND
+					} else {
+						flags |= os.O_TRUNC
+					}
+
+					ef, err := os.OpenFile(errFile, flags, 0644)
 					if err != nil {
 						fmt.Println("error opening file:", err)
 						break

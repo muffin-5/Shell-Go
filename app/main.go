@@ -20,16 +20,28 @@ var builtins = map[string]bool{
 	"cd":   true,
 }
 
-func extractRedirection(args []string) ([]string, string) {
-	for i := 0; i < len(args)-1; i++ {
-		if args[i] == ">" || args[i] == "1>" {
-			file := args[i+1]
+func extractRedirection(args []string) ([]string, string, string) {
+	var stdoutFile string
+	var stderrFile string
 
-			newArgs := append(args[:i], args[i+2:]...)
-			return newArgs, file
+	newArgs := []string{}
+	for i := 0; i < len(args); i++ {
+		if i+1 < len(args) {
+			if args[i] == ">" || args[i] == "1>" {
+				stdoutFile = args[i+1]
+				i++
+				continue
+			}
+			if args[i] == "2>" {
+				stderrFile = args[i+1]
+				i++
+				continue
+			}
 		}
+		newArgs = append(newArgs, args[i])
+
 	}
-	return args, ""
+	return newArgs, stdoutFile, stderrFile
 }
 
 func parseCommand(input string) []string {
@@ -115,13 +127,20 @@ func main() {
 		cmd := fields[0]
 		args := fields[1:]
 
-		if command == "exit" {
+		if cmd == "exit" {
 			return
 		}
 
 		if cmd == "echo" {
-			args, outFile := extractRedirection(args)
+			args, outFile, errFile := extractRedirection(args)
 			output := strings.Join(args, " ")
+
+			if errFile != "" {
+				f, err := os.OpenFile(errFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+				if err != nil {
+					f.Close()
+				}
+			}
 
 			if outFile != "" {
 				f, err := os.OpenFile(outFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
@@ -135,6 +154,7 @@ func main() {
 			} else {
 				fmt.Println(output)
 			}
+
 			continue
 		}
 
@@ -210,7 +230,7 @@ func main() {
 			continue
 		}
 
-		args, outFile := extractRedirection(args)
+		args, outFile, errFile := extractRedirection(args)
 
 		pathenv := os.Getenv("PATH")
 		dirs := strings.Split(pathenv, string(os.PathListSeparator))
@@ -226,7 +246,6 @@ func main() {
 			if info.Mode().IsRegular() && info.Mode().Perm()&0111 != 0 {
 				c := exec.Command(cmd, args...)
 				c.Stdin = os.Stdin
-				c.Stderr = os.Stderr
 
 				if outFile != "" {
 					f, err := os.OpenFile(outFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
@@ -236,13 +255,25 @@ func main() {
 					}
 
 					c.Stdout = f
-					c.Run()
-					f.Close()
+					defer f.Close()
 				} else {
 					c.Stdout = os.Stdout
-					c.Run()
 				}
 
+				if errFile != "" {
+					ef, err := os.OpenFile(errFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+					if err != nil {
+						fmt.Println("error opening file:", err)
+						break
+					}
+
+					c.Stderr = ef
+					defer ef.Close()
+				} else {
+					c.Stderr = os.Stderr
+				}
+
+				c.Run()
 				executed = true
 				break
 			}

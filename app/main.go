@@ -20,19 +20,28 @@ var builtins = map[string]bool{
 	"cd":   true,
 }
 
-func extractRedirection(args []string) ([]string, string, string) {
+func extractRedirection(args []string) ([]string, string, bool, string) {
 	var stdoutFile string
 	var stderrFile string
+	appendStdout := false
 
 	newArgs := []string{}
+
 	for i := 0; i < len(args); i++ {
 		if i+1 < len(args) {
-			if args[i] == ">" || args[i] == "1>" {
+			switch args[i] {
+			case ">", "1>":
 				stdoutFile = args[i+1]
+				appendStdout = false
 				i++
 				continue
-			}
-			if args[i] == "2>" {
+
+			case ">>", "1>>":
+				stdoutFile = args[i+1]
+				appendStdout = true
+				i++
+				continue
+			case "2>":
 				stderrFile = args[i+1]
 				i++
 				continue
@@ -41,7 +50,7 @@ func extractRedirection(args []string) ([]string, string, string) {
 		newArgs = append(newArgs, args[i])
 
 	}
-	return newArgs, stdoutFile, stderrFile
+	return newArgs, stdoutFile, appendStdout, stderrFile
 }
 
 func parseCommand(input string) []string {
@@ -132,7 +141,7 @@ func main() {
 		}
 
 		if cmd == "echo" {
-			args, outFile, errFile := extractRedirection(args)
+			args, outFile, appendOut, errFile := extractRedirection(args)
 			output := strings.Join(args, " ")
 
 			if errFile != "" {
@@ -143,7 +152,13 @@ func main() {
 			}
 
 			if outFile != "" {
-				f, err := os.OpenFile(outFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+				flags := os.O_CREATE | os.O_WRONLY
+				if appendOut {
+					flags |= os.O_APPEND
+				} else {
+					flags |= os.O_TRUNC
+				}
+				f, err := os.OpenFile(outFile, flags, 0644)
 				if err != nil {
 					fmt.Println("error opening file:", err)
 					continue
@@ -230,7 +245,7 @@ func main() {
 			continue
 		}
 
-		args, outFile, errFile := extractRedirection(args)
+		args, outFile, appendOut, errFile := extractRedirection(args)
 
 		pathenv := os.Getenv("PATH")
 		dirs := strings.Split(pathenv, string(os.PathListSeparator))
@@ -248,7 +263,15 @@ func main() {
 				c.Stdin = os.Stdin
 
 				if outFile != "" {
-					f, err := os.OpenFile(outFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+					flags := os.O_CREATE | os.O_WRONLY
+
+					if appendOut {
+						flags |= os.O_APPEND
+					} else {
+						flags |= os.O_TRUNC
+					}
+
+					f, err := os.OpenFile(outFile, flags, 0644)
 					if err != nil {
 						fmt.Println("error opening file:", err)
 						break

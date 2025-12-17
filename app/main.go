@@ -1,12 +1,13 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/chzyer/readline"
 )
 
 // Ensures gofmt doesn't remove the "fmt" import in stage 1 (feel free to remove this!)
@@ -119,14 +120,22 @@ func parseCommand(input string) []string {
 
 func main() {
 
-	reader := bufio.NewReader(os.Stdin)
-
+	// reader := bufio.NewReader(os.Stdin)
+	completer := readline.NewPrefixCompleter(
+		readline.PcItem("echo"),
+		readline.PcItem("exit"),
+	)
+	rl, err := readline.NewEx(&readline.Config{
+		Prompt:       "$ ",
+		AutoComplete: completer,
+	})
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 	for {
-		// TODO: Uncomment the code below to pass the first stage
-		fmt.Print("$ ")
 
-		//Print invlid command
-		command, err := reader.ReadString('\n')
+		command, err := rl.Readline()
 		if err != nil {
 			fmt.Println("Err:", err)
 			return

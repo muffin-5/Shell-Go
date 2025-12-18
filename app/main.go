@@ -32,11 +32,46 @@ func (c *commandCompleter) Do(line []rune, pos int) (newLine [][]rune, length in
 		return nil, 0
 	}
 
-	commands := []string{"echo ", "exit ", "type ", "pwd ", "cd "}
+	seen := make(map[string]bool)
 
-	for _, command := range commands {
-		if strings.HasPrefix(command, trimmedStr) {
-			suggestions = append(suggestions, []rune(command[len(trimmedStr):]))
+	addCandidate := func(name string) {
+		if seen[name] {
+			return
+		}
+
+		if strings.HasPrefix(name, trimmedStr) {
+			suffix := name[len(trimmedStr):] + " "
+			suggestions = append(suggestions, []rune(suffix))
+			seen[name] = true
+		}
+	}
+
+	builtinList := []string{"echo", "exit", "type", "pwd", "cd"}
+
+	for _, cmd := range builtinList {
+		addCandidate(cmd)
+	}
+
+	pathEnv := os.Getenv("PATH")
+	dirs := strings.Split(pathEnv, string(os.PathListSeparator))
+
+	for _, dir := range dirs {
+		files, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
+
+		for _, file := range files {
+			if strings.HasPrefix(file.Name(), trimmedStr) {
+				info, err := file.Info()
+				if err != nil {
+					continue
+				}
+
+				if info.Mode().IsRegular() && info.Mode().Perm()&0111 != 0 {
+					addCandidate(file.Name())
+				}
+			}
 		}
 	}
 

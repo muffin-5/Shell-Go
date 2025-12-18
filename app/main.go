@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/chzyer/readline"
@@ -21,10 +22,13 @@ var builtins = map[string]bool{
 	"cd":   true,
 }
 
-type commandCompleter struct{}
+type commandCompleter struct {
+	lastPrefix string
+	tabCount   int
+}
 
 func (c *commandCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
-	var suggestions [][]rune
+
 	lineStr := string(line[:pos])
 	trimmedStr := strings.TrimLeft(lineStr, " ")
 
@@ -32,7 +36,15 @@ func (c *commandCompleter) Do(line []rune, pos int) (newLine [][]rune, length in
 		return nil, 0
 	}
 
+	if trimmedStr == c.lastPrefix {
+		c.tabCount++
+	} else {
+		c.lastPrefix = trimmedStr
+		c.tabCount = 1
+	}
+
 	seen := make(map[string]bool)
+	var matches []string
 
 	addCandidate := func(name string) {
 		if seen[name] {
@@ -40,9 +52,8 @@ func (c *commandCompleter) Do(line []rune, pos int) (newLine [][]rune, length in
 		}
 
 		if strings.HasPrefix(name, trimmedStr) {
-			suffix := name[len(trimmedStr):] + " "
-			suggestions = append(suggestions, []rune(suffix))
 			seen[name] = true
+			matches = append(matches, name)
 		}
 	}
 
@@ -75,11 +86,31 @@ func (c *commandCompleter) Do(line []rune, pos int) (newLine [][]rune, length in
 		}
 	}
 
-	if len(suggestions) == 0 {
-		fmt.Print("\007")
+	if len(matches) == 0 {
+		fmt.Print("\x07")
+		return nil, 0
 	}
 
-	return suggestions, len(trimmedStr)
+	if len(matches) == 1 {
+		suffix := matches[0][len(trimmedStr):] + " "
+		c.tabCount = 0
+		return [][]rune{[]rune(suffix)}, len(trimmedStr)
+	}
+
+	if c.tabCount == 1 {
+		fmt.Print("\x07")
+		return nil, 0
+	}
+
+	sort.Strings(matches)
+
+	fmt.Print("\n")
+	fmt.Print(strings.Join(matches, "  "))
+	fmt.Print("\n")
+	fmt.Print("$ " + trimmedStr)
+
+	c.tabCount = 0
+	return nil, 0
 }
 
 func extractRedirection(args []string) ([]string, string, bool, string, bool) {

@@ -234,6 +234,25 @@ func parseCommand(input string) []string {
 	return args
 }
 
+func runBuiltint(cmd string, args []string) {
+	switch cmd {
+	case "echo":
+		fmt.Println(strings.Join(args, " "))
+	case "type":
+		if len(args) > 0 {
+			if builtins[args[0]] {
+				fmt.Println(args[0] + " is a shell builtin")
+			} else {
+				fmt.Println(args[0] + ": not found")
+			}
+		}
+	case "pwd":
+		wd, _ := os.Getwd()
+		fmt.Println(wd)
+	}
+
+}
+
 func main() {
 
 	rl, err := readline.NewEx(&readline.Config{
@@ -283,6 +302,62 @@ func main() {
 			r, w, err := os.Pipe()
 			if err != nil {
 				fmt.Println("pipe error:", err)
+				continue
+			}
+
+			if builtins[cmd1[0]] && builtins[cmd2[0]] {
+				oldStdout := os.Stdout
+				oldStdin := os.Stdin
+
+				os.Stdout = w
+				runBuiltint(cmd1[0], cmd1[1:])
+				w.Close()
+
+				os.Stdin = r
+				runBuiltint(cmd2[0], cmd2[1:])
+
+				os.Stdout = oldStdout
+				os.Stdin = oldStdin
+				r.Close()
+				continue
+			}
+
+			if builtins[cmd1[0]] {
+				oldStdout := os.Stdout
+				os.Stdout = w
+
+				runBuiltint(cmd1[0], cmd1[1:])
+
+				w.Close()
+				os.Stdout = oldStdout
+
+				c2 := exec.Command(cmd2[0], cmd2[1:]...)
+				c2.Stdin = r
+				c2.Stdout = os.Stdout
+				c2.Stderr = os.Stderr
+				c2.Run()
+
+				r.Close()
+				continue
+			}
+
+			if builtins[cmd2[0]] {
+				c1 := exec.Command(cmd1[0], cmd1[1:]...)
+				c1.Stdout = w
+				c1.Stderr = os.Stderr
+
+				c1.Start()
+				w.Close()
+
+				oldStdin := os.Stdin
+				os.Stdin = r
+
+				runBuiltint(cmd2[0], cmd2[1:])
+
+				os.Stdin = oldStdin
+				r.Close()
+
+				c1.Wait()
 				continue
 			}
 

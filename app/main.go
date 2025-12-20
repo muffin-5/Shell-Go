@@ -27,6 +27,23 @@ type commandCompleter struct {
 	tabCount   int
 }
 
+func longestCommonPrefix(strs []string) string {
+	if len(strs) == 0 {
+		return ""
+	}
+
+	prefix := strs[0]
+	for _, s := range strs[1:] {
+		for !strings.HasPrefix(s, prefix) {
+			if len(prefix) == 0 {
+				return ""
+			}
+			prefix = prefix[0 : len(prefix)-1]
+		}
+	}
+
+	return prefix
+}
 func (c *commandCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
 
 	lineStr := string(line[:pos])
@@ -93,6 +110,13 @@ func (c *commandCompleter) Do(line []rune, pos int) (newLine [][]rune, length in
 
 	if len(matches) == 1 {
 		suffix := matches[0][len(trimmedStr):] + " "
+		c.tabCount = 0
+		return [][]rune{[]rune(suffix)}, len(trimmedStr)
+	}
+
+	lcp := longestCommonPrefix(matches)
+	if len(lcp) > len(trimmedStr) {
+		suffix := lcp[len(trimmedStr):]
 		c.tabCount = 0
 		return [][]rune{[]rune(suffix)}, len(trimmedStr)
 	}

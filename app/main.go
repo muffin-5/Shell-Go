@@ -264,6 +264,56 @@ func main() {
 
 		fields := parseCommand(command)
 
+		pipeIndex := -1
+		for i, f := range fields {
+			if f == "|" {
+				pipeIndex = i
+				break
+			}
+		}
+
+		if pipeIndex != -1 {
+			cmd1 := fields[:pipeIndex]
+			cmd2 := fields[pipeIndex+1:]
+
+			if len(cmd1) == 0 || len(cmd2) == 0 {
+				fmt.Println("Invalid pipeline")
+			}
+
+			r, w, err := os.Pipe()
+			if err != nil {
+				fmt.Println("pipe error:", err)
+				continue
+			}
+
+			c1 := exec.Command(cmd1[0], cmd1[1:]...)
+			c2 := exec.Command(cmd2[0], cmd2[1:]...)
+
+			c1.Stdout = w
+			c1.Stderr = os.Stderr
+
+			c2.Stdin = r
+			c2.Stdout = os.Stdout
+			c2.Stderr = os.Stderr
+
+			if err := c1.Start(); err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			if err := c2.Start(); err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			w.Close()
+			r.Close()
+
+			c1.Wait()
+			c2.Wait()
+			continue
+		}
+
 		cmd := fields[0]
 		args := fields[1:]
 

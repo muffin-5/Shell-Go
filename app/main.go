@@ -284,109 +284,188 @@ func main() {
 		fields := parseCommand(command)
 
 		pipeIndex := -1
+		pipeCount := 0
 		for i, f := range fields {
 			if f == "|" {
-				pipeIndex = i
-				break
+				if pipeIndex == -1 {
+					pipeIndex = i
+				}
+				pipeCount++
+				// break
 			}
 		}
 
 		if pipeIndex != -1 {
-			cmd1 := fields[:pipeIndex]
-			cmd2 := fields[pipeIndex+1:]
 
-			if len(cmd1) == 0 || len(cmd2) == 0 {
-				fmt.Println("Invalid pipeline")
-			}
+			if pipeCount > 1 {
 
-			r, w, err := os.Pipe()
-			if err != nil {
-				fmt.Println("pipe error:", err)
+				var pipeline [][]string
+				var current []string
+
+				for _, f := range fields {
+					if f == "|" {
+						pipeline = append(pipeline, current)
+						current = []string{}
+					} else {
+						current = append(current, f)
+					}
+
+				}
+				pipeline = append(pipeline, current)
+
+				n := len(pipeline)
+				if n < 2 {
+					fmt.Println("invalid pipeline")
+					continue
+				}
+
+				pipes := make([][2]*os.File, n-1)
+				for i := 0; i < n-1; i++ {
+					r, w, err := os.Pipe()
+					if err != nil {
+						fmt.Println("pipe error:", err)
+						continue
+					}
+					pipes[i] = [2]*os.File{r, w}
+				}
+
+				var cmds []*exec.Cmd
+
+				for i, args := range pipeline {
+					cmd := exec.Command(args[0], args[1:]...)
+
+					if i > 0 {
+						cmd.Stdin = pipes[i-1][0]
+					} else {
+						cmd.Stdin = os.Stdin
+					}
+
+					if i < n-1 {
+						cmd.Stdout = pipes[i][1]
+					} else {
+						cmd.Stdout = os.Stdout
+					}
+
+					cmd.Stderr = os.Stderr
+					cmds = append(cmds, cmd)
+				}
+
+				for _, cmd := range cmds {
+					if err := cmd.Start(); err != nil {
+						fmt.Println(err)
+						continue
+					}
+				}
+
+				for _, p := range pipes {
+					p[0].Close()
+					p[1].Close()
+				}
+
+				for _, cmd := range cmds {
+					cmd.Wait()
+				}
+
 				continue
-			}
 
-			if builtins[cmd1[0]] && builtins[cmd2[0]] {
-				oldStdout := os.Stdout
-				oldStdin := os.Stdin
+			} else {
 
-				os.Stdout = w
-				runBuiltint(cmd1[0], cmd1[1:])
-				w.Close()
+				cmd1 := fields[:pipeIndex]
+				cmd2 := fields[pipeIndex+1:]
 
-				os.Stdin = r
-				runBuiltint(cmd2[0], cmd2[1:])
+				if len(cmd1) == 0 || len(cmd2) == 0 {
+					fmt.Println("Invalid pipeline")
+				}
 
-				os.Stdout = oldStdout
-				os.Stdin = oldStdin
-				r.Close()
-				continue
-			}
+				r, w, err := os.Pipe()
+				if err != nil {
+					fmt.Println("pipe error:", err)
+					continue
+				}
 
-			if builtins[cmd1[0]] {
-				oldStdout := os.Stdout
-				os.Stdout = w
+				if builtins[cmd1[0]] && builtins[cmd2[0]] {
+					oldStdout := os.Stdout
+					oldStdin := os.Stdin
 
-				runBuiltint(cmd1[0], cmd1[1:])
+					os.Stdout = w
+					runBuiltint(cmd1[0], cmd1[1:])
+					w.Close()
 
-				w.Close()
-				os.Stdout = oldStdout
+					os.Stdin = r
+					runBuiltint(cmd2[0], cmd2[1:])
 
-				c2 := exec.Command(cmd2[0], cmd2[1:]...)
-				c2.Stdin = r
-				c2.Stdout = os.Stdout
-				c2.Stderr = os.Stderr
-				c2.Run()
+					os.Stdout = oldStdout
+					os.Stdin = oldStdin
+					r.Close()
+					continue
+				}
 
-				r.Close()
-				continue
-			}
+				if builtins[cmd1[0]] {
+					oldStdout := os.Stdout
+					os.Stdout = w
 
-			if builtins[cmd2[0]] {
+					runBuiltint(cmd1[0], cmd1[1:])
+
+					w.Close()
+					os.Stdout = oldStdout
+
+					c2 := exec.Command(cmd2[0], cmd2[1:]...)
+					c2.Stdin = r
+					c2.Stdout = os.Stdout
+					c2.Stderr = os.Stderr
+					c2.Run()
+
+					r.Close()
+					continue
+				}
+
+				if builtins[cmd2[0]] {
+					c1 := exec.Command(cmd1[0], cmd1[1:]...)
+					c1.Stdout = w
+					c1.Stderr = os.Stderr
+
+					c1.Start()
+					w.Close()
+
+					oldStdin := os.Stdin
+					os.Stdin = r
+
+					runBuiltint(cmd2[0], cmd2[1:])
+
+					os.Stdin = oldStdin
+					r.Close()
+
+					c1.Wait()
+					continue
+				}
+
 				c1 := exec.Command(cmd1[0], cmd1[1:]...)
+				c2 := exec.Command(cmd2[0], cmd2[1:]...)
+
 				c1.Stdout = w
 				c1.Stderr = os.Stderr
 
-				c1.Start()
+				c2.Stdin = r
+				c2.Stdout = os.Stdout
+				c2.Stderr = os.Stderr
+
+				if err := c1.Start(); err != nil {
+					fmt.Println(err)
+					continue
+				}
+
+				if err := c2.Start(); err != nil {
+					fmt.Println(err)
+					continue
+				}
+
 				w.Close()
-
-				oldStdin := os.Stdin
-				os.Stdin = r
-
-				runBuiltint(cmd2[0], cmd2[1:])
-
-				os.Stdin = oldStdin
 				r.Close()
 
 				c1.Wait()
+				c2.Wait()
 				continue
 			}
-
-			c1 := exec.Command(cmd1[0], cmd1[1:]...)
-			c2 := exec.Command(cmd2[0], cmd2[1:]...)
-
-			c1.Stdout = w
-			c1.Stderr = os.Stderr
-
-			c2.Stdin = r
-			c2.Stdout = os.Stdout
-			c2.Stderr = os.Stderr
-
-			if err := c1.Start(); err != nil {
-				fmt.Println(err)
-				continue
-			}
-
-			if err := c2.Start(); err != nil {
-				fmt.Println(err)
-				continue
-			}
-
-			w.Close()
-			r.Close()
-
-			c1.Wait()
-			c2.Wait()
-			continue
 		}
 
 		cmd := fields[0]

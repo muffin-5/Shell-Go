@@ -15,17 +15,20 @@ import (
 var _ = fmt.Print
 
 var builtins = map[string]bool{
-	"exit": true,
-	"echo": true,
-	"type": true,
-	"pwd":  true,
-	"cd":   true,
+	"exit":    true,
+	"echo":    true,
+	"type":    true,
+	"pwd":     true,
+	"cd":      true,
+	"history": true,
 }
 
 type commandCompleter struct {
 	lastPrefix string
 	tabCount   int
 }
+
+var historyList []string
 
 func longestCommonPrefix(strs []string) string {
 	if len(strs) == 0 {
@@ -74,7 +77,7 @@ func (c *commandCompleter) Do(line []rune, pos int) (newLine [][]rune, length in
 		}
 	}
 
-	builtinList := []string{"echo", "exit", "type", "pwd", "cd"}
+	builtinList := []string{"echo", "exit", "type", "pwd", "cd", "history"}
 
 	for _, cmd := range builtinList {
 		addCandidate(cmd)
@@ -249,6 +252,10 @@ func runBuiltint(cmd string, args []string) {
 	case "pwd":
 		wd, _ := os.Getwd()
 		fmt.Println(wd)
+	case "history":
+		for i, h := range historyList {
+			fmt.Printf("%5d  %s\n", i+1, h)
+		}
 	}
 
 }
@@ -280,6 +287,8 @@ func main() {
 		if command == "" {
 			continue
 		}
+
+		historyList = append(historyList, command)
 
 		fields := parseCommand(command)
 
@@ -583,6 +592,13 @@ func main() {
 				fmt.Println("cd:", path+": No such file or directory")
 			}
 
+			continue
+		}
+
+		if cmd == "history" {
+			for i, h := range historyList {
+				fmt.Println("%5d %s\n", i+1, h)
+			}
 			continue
 		}
 

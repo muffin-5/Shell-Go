@@ -253,6 +253,10 @@ func runBuiltint(cmd string, args []string) {
 		wd, _ := os.Getwd()
 		fmt.Println(wd)
 	case "history":
+		if len(args) >= 2 && args[0] == "-r" {
+			readHistoryFile(args[1])
+			return
+		}
 		if len(args) > 0 {
 			n := 0
 			fmt.Sscanf(args[0], "%d", &n)
@@ -274,6 +278,21 @@ func printHistory(n int) {
 
 	for i := start; i < total; i++ {
 		fmt.Printf("%5d  %s\n", i+1, historyList[i])
+	}
+}
+
+func readHistoryFile(path string) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return
+	}
+
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			historyList = append(historyList, line)
+		}
 	}
 }
 
@@ -613,6 +632,10 @@ func main() {
 		}
 
 		if cmd == "history" {
+			if len(args) >= 2 && args[0] == "-r" {
+				readHistoryFile(args[1])
+				continue
+			}
 			if len(args) > 0 {
 				n := 0
 				fmt.Sscanf(args[0], "%d", &n)

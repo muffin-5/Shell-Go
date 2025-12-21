@@ -580,6 +580,9 @@ func main() {
 		args := fields[1:]
 
 		if cmd == "exit" {
+			if histFile != "" {
+				writeHistoryFile(histFile)
+			}
 			return
 		}
 

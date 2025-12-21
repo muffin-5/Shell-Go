@@ -30,6 +30,8 @@ type commandCompleter struct {
 
 var historyList []string
 
+var historyAppendIndex int = 0
+
 func longestCommonPrefix(strs []string) string {
 	if len(strs) == 0 {
 		return ""
@@ -263,6 +265,11 @@ func runBuiltint(cmd string, args []string) {
 			return
 		}
 
+		if len(args) >= 2 && args[0] == "-a" {
+			appendHistoryFile(args[1])
+			return
+		}
+
 		if len(args) > 0 {
 			n := 0
 			fmt.Sscanf(args[0], "%d", &n)
@@ -312,6 +319,20 @@ func writeHistoryFile(path string) {
 	for _, h := range historyList {
 		fmt.Fprintln(f, h)
 	}
+}
+
+func appendHistoryFile(path string) {
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+
+	for i := historyAppendIndex; i < len(historyList); i++ {
+		fmt.Fprintln(f, historyList[i])
+	}
+
+	historyAppendIndex = len(historyList)
 }
 
 func main() {
@@ -657,6 +678,11 @@ func main() {
 
 			if len(args) >= 2 && args[0] == "-w" {
 				writeHistoryFile(args[1])
+				continue
+			}
+
+			if len(args) >= 2 && args[0] == "-a" {
+				appendHistoryFile(args[1])
 				continue
 			}
 

@@ -597,7 +597,7 @@ func main() {
 
 		if cmd == "history" {
 			for i, h := range historyList {
-				fmt.Println("%5d %s\n", i+1, h)
+				fmt.Printf("%5d %s\n", i+1, h)
 			}
 			continue
 		}

@@ -335,6 +335,25 @@ func appendHistoryFile(path string) {
 	historyAppendIndex = len(historyList)
 }
 
+func loadHistoryFromFile(path string) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return
+	}
+
+	lines := strings.Split(string(data), "\n")
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		historyList = append(historyList, line)
+	}
+
+	historyAppendIndex = len(historyList)
+}
+
 func main() {
 
 	rl, err := readline.NewEx(&readline.Config{
@@ -348,6 +367,11 @@ func main() {
 		os.Exit(1)
 	}
 	defer rl.Close()
+
+	histFile := os.Getenv("HISTFILE")
+	if histFile != "" {
+		loadHistoryFromFile(histFile)
+	}
 
 	for {
 

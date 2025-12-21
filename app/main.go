@@ -253,11 +253,28 @@ func runBuiltint(cmd string, args []string) {
 		wd, _ := os.Getwd()
 		fmt.Println(wd)
 	case "history":
-		for i, h := range historyList {
-			fmt.Printf("%5d  %s\n", i+1, h)
+		if len(args) > 0 {
+			n := 0
+			fmt.Sscanf(args[0], "%d", &n)
+			printHistory(n)
+		} else {
+			printHistory(0)
 		}
 	}
 
+}
+
+func printHistory(n int) {
+	total := len(historyList)
+
+	start := 0
+	if n > 0 && n < total {
+		start = total - n
+	}
+
+	for i := start; i < total; i++ {
+		fmt.Printf("%5d  %s\n", i+1, historyList[i])
+	}
 }
 
 func main() {
@@ -596,8 +613,12 @@ func main() {
 		}
 
 		if cmd == "history" {
-			for i, h := range historyList {
-				fmt.Printf("%5d %s\n", i+1, h)
+			if len(args) > 0 {
+				n := 0
+				fmt.Sscanf(args[0], "%d", &n)
+				printHistory(n)
+			} else {
+				printHistory(0)
 			}
 			continue
 		}

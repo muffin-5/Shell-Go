@@ -44,6 +44,6 @@ creation, command parsing, and standard I/O handling.
 
 ### Steps
 ```bash
-git clone https://github.com/<your-username>/Shell-Go.git
+git clone https://github.com/muffin-5/Shell-Go.git
 cd Shell-Go
 ./your_program.sh

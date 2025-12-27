@@ -1,34 +1,49 @@
-[![progress-banner](https://backend.codecrafters.io/progress/shell/c4fdecdc-235b-4533-a930-cabaac7bf29e)](https://app.codecrafters.io/users/codecrafters-bot?r=2qF)
+# POSIX-Compliant Shell in Go
 
-This is a starting point for Go solutions to the
-["Build Your Own Shell" Challenge](https://app.codecrafters.io/courses/shell/overview).
+A custom POSIX-compliant command-line shell built from scratch in Go.  
+This shell supports executing external programs, built-in commands, and provides
+an interactive REPL similar to Unix shells.
 
-In this challenge, you'll build your own POSIX compliant shell that's capable of
-interpreting shell commands, running external programs and builtin commands like
-cd, pwd, echo and more. Along the way, you'll learn about shell command parsing,
-REPLs, builtin commands, and more.
+This project demonstrates low-level systems programming concepts such as process
+creation, command parsing, and standard I/O handling.
 
-**Note**: If you're viewing this repo on GitHub, head over to
-[codecrafters.io](https://codecrafters.io) to try the challenge.
+---
 
-# Passing the first stage
+## 🚀 Features
 
-The entry point for your `shell` implementation is in `app/main.go`. Study and
-uncomment the relevant code, and push your changes to pass the first stage:
+- Interactive REPL (Read–Eval–Print Loop)
+- Execution of external commands
+- Built-in commands:
+  - `cd`
+  - `pwd`
+  - `echo`
+- Command parsing and argument handling
+- Environment variable support
+- Proper exit status handling
+- Command piping (|)
+- Input/output redirection (>, <)
 
-```sh
-git commit -am "pass 1st stage" # any msg
-git push origin master
-```
+---
 
-Time to move on to the next stage!
+## 🛠 Tech Stack
 
-# Stage 2 & beyond
+- **Language:** Go
+- **Concepts Used:**
+  - Process management (`os/exec`)
+  - File descriptors & standard I/O
+  - String parsing
+  - Error handling
+  - REPL design
 
-Note: This section is for stages 2 and beyond.
+---
 
-1. Ensure you have `go (1.25)` installed locally
-1. Run `./your_program.sh` to run your program, which is implemented in
-   `app/main.go`.
-1. Commit your changes and run `git push origin master` to submit your solution
-   to CodeCrafters. Test output will be streamed to your terminal.
+## ▶️ How to Run Locally
+
+### Prerequisites
+- Go 1.25 or higher
+
+### Steps
+```bash
+git clone https://github.com/<your-username>/Shell-Go.git
+cd Shell-Go
+./your_program.sh
